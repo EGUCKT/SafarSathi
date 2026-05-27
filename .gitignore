@@ -1,0 +1,42 @@
+# Python virtual environment & packages
+.venv/
+venv/
+ENV/
+env/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+
+# FastAPI / Backend Secrets & Cache
+ss1/backend/.env
+ss1/backend/firebase-credentials.json
+ss1/backend/cache/
+ss1/backend/data/processed/indore_mhow_graph.graphml  # Highly recommended to ignore as it's generated (25MB)
+
+# Flutter / Dart / Web dependencies & build files
+ss1/.dart_tool/
+ss1/.flutter-plugins
+ss1/.flutter-plugins-dependencies
+ss1/.pub-cache/
+ss1/.pub/
+ss1/build/
+ss1/build_symlinks/
+ss1/ephemeral/
+ss1/linux/flutter/ephemeral/
+ss1/windows/flutter/ephemeral/
+ss1/web/assets/
+ss1/web/flutter_bootstrap.js
+
+# IDEs & System files
+.vscode/
+.idea/
+*.iml
+*.ipr
+*.iws
+.DS_Store
+Thumbs.db
+build/
+*.hprof

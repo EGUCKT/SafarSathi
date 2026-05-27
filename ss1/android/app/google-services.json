@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "1006768866634",
+    "firebase_url": "https://eguckt-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "eguckt",
+    "storage_bucket": "eguckt.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1006768866634:android:18b725cd97bf9f34a66db3",
+        "android_client_info": {
+          "package_name": "com.example.ss1"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1006768866634-kngigr08706e9429njnsludq31oakge4.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.ss1",
+            "certificate_hash": "a2f11d7e9fa072f1a02fea0f33f17a30f3d665c4"
+          }
+        },
+        {
+          "client_id": "1006768866634-pgh0t5ompramkatv04tge42th89bmv43.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCxnBBpfoGoqh3qATe-A6BadQ4DKr-30BI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1006768866634-pgh0t5ompramkatv04tge42th89bmv43.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

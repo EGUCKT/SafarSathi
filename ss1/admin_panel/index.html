@@ -1,0 +1,1027 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SafarSathi Admin | Real-Time Safety Feed</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #0A84FF;
+            --primary-glow: rgba(10, 132, 255, 0.4);
+            --danger: #FF453A;
+            --danger-glow: rgba(255, 69, 58, 0.3);
+            --success: #30D158;
+            --success-glow: rgba(48, 209, 88, 0.3);
+            --warning: #FF9F0A;
+            --warning-glow: rgba(255, 159, 10, 0.3);
+            --bg: #060608;
+            --glass-bg: rgba(28, 28, 35, 0.72);
+            --glass-bg-hover: rgba(38, 38, 48, 0.85);
+            --glass-border: rgba(255, 255, 255, 0.12);
+            --glass-border-active: rgba(10, 132, 255, 0.5);
+            --text-primary: rgba(255, 255, 255, 0.95);
+            --text-secondary: rgba(255, 255, 255, 0.55);
+            --text-tertiary: rgba(255, 255, 255, 0.3);
+            --blur: 30px;
+            --blur-heavy: 50px;
+            --panel-width: 390px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            background: var(--bg);
+            color: var(--text-primary);
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
+        /* ─── MAP ─── */
+        #map { flex: 1; height: 100%; z-index: 1; }
+
+        .leaflet-layer,
+        .leaflet-control-zoom-in,
+        .leaflet-control-zoom-out,
+        .leaflet-control-attribution {
+          filter: invert(100%) hue-rotate(180deg) brightness(85%) contrast(85%) saturate(0.7);
+        }
+
+        /* ─── NOISE TEXTURE OVERLAY ─── */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+            pointer-events: none;
+            z-index: 9999;
+            opacity: 0.4;
+        }
+
+        /* ─── PANEL ─── */
+        .panel {
+            width: var(--panel-width);
+            background: var(--glass-bg);
+            backdrop-filter: blur(var(--blur-heavy)) saturate(180%);
+            -webkit-backdrop-filter: blur(var(--blur-heavy)) saturate(180%);
+            border-left: 1px solid var(--glass-border);
+            display: flex;
+            flex-direction: column;
+            z-index: 10;
+            box-shadow: -20px 0 60px rgba(0,0,0,0.6), inset 1px 0 0 rgba(255,255,255,0.06);
+            position: relative;
+        }
+
+        /* Liquid glass specular highlight */
+        .panel::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+            pointer-events: none;
+        }
+
+        /* ─── PANEL HEADER ─── */
+        .panel-header {
+            padding: 28px 24px 20px;
+            border-bottom: 1px solid var(--glass-border);
+            position: relative;
+        }
+
+        .panel-header-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .logo-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo-icon {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, var(--primary), #5E5CE6);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px var(--primary-glow);
+        }
+
+        .panel-header h1 {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-primary);
+            letter-spacing: -0.3px;
+        }
+
+        .live-badge {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(48, 209, 88, 0.12);
+            border: 1px solid rgba(48, 209, 88, 0.25);
+            border-radius: 20px;
+            padding: 4px 10px;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--success);
+            letter-spacing: 0.5px;
+        }
+
+        .live-dot {
+            width: 6px;
+            height: 6px;
+            background: var(--success);
+            border-radius: 50%;
+            animation: livePulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes livePulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.4; transform: scale(0.8); }
+        }
+
+        .panel-subtitle {
+            font-size: 12px;
+            color: var(--text-secondary);
+            letter-spacing: 0.2px;
+        }
+
+        /* ─── MAP POPUP ─── */
+        .map-popup {
+            background: rgba(18, 18, 24, 0.92) !important;
+            backdrop-filter: blur(24px) !important;
+            -webkit-backdrop-filter: blur(24px) !important;
+            border: 1px solid rgba(255,255,255,0.12) !important;
+            border-radius: 16px !important;
+            padding: 0 !important;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.7) !important;
+            color: white !important;
+            font-family: 'Inter', sans-serif !important;
+            min-width: 220px !important;
+        }
+        .leaflet-popup-content-wrapper {
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+            border-radius: 16px !important;
+            padding: 0 !important;
+        }
+        .leaflet-popup-content {
+            margin: 0 !important;
+            color: white !important;
+        }
+        .leaflet-popup-tip-container { display: none !important; }
+        .leaflet-popup-close-button {
+            color: rgba(255,255,255,0.4) !important;
+            font-size: 18px !important;
+            top: 8px !important; right: 10px !important;
+        }
+        .leaflet-popup-close-button:hover { color: white !important; }
+
+        .popup-inner {
+            padding: 16px;
+        }
+        .popup-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 12px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+        .popup-icon {
+            width: 34px; height: 34px;
+            border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+        }
+        .popup-area-name { font-size: 13px; font-weight: 700; line-height: 1.2; }
+        .popup-count { font-size: 11px; color: rgba(255,255,255,0.45); margin-top: 2px; }
+
+        .popup-report-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .popup-report-row:last-child { border-bottom: none; }
+        .popup-report-dot {
+            width: 7px; height: 7px;
+            border-radius: 50%; flex-shrink: 0;
+        }
+        .popup-report-label { font-size: 12px; font-weight: 500; flex: 1; }
+        .popup-report-time { font-size: 10px; color: rgba(255,255,255,0.35); white-space: nowrap; }
+
+        .popup-safety-bar {
+            margin-top: 12px;
+            padding-top: 10px;
+            border-top: 1px solid rgba(255,255,255,0.08);
+        }
+        .popup-safety-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+        .popup-safety-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.8px; color: rgba(255,255,255,0.35); }
+        .popup-safety-score { font-size: 13px; font-weight: 700; }
+        .popup-track {
+            height: 4px;
+            background: rgba(255,255,255,0.08);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+        .popup-fill {
+            height: 100%;
+            border-radius: 2px;
+            transition: width 0.5s ease;
+        }
+
+        /* ─── AREA LIST ─── */
+        .section-label {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-tertiary);
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+            padding: 16px 24px 8px;
+        }
+
+        .area-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0 16px 16px;
+            scroll-behavior: smooth;
+        }
+
+        /* Scrollbar */
+        .area-list::-webkit-scrollbar { width: 3px; }
+        .area-list::-webkit-scrollbar-track { background: transparent; }
+        .area-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+
+        /* ─── AREA BAR ─── */
+        .area-bar {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 18px;
+            padding: 16px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: background 0.25s, border-color 0.25s, transform 0.2s, box-shadow 0.25s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Glass specular on card */
+        .area-bar::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+            pointer-events: none;
+        }
+
+        .area-bar:hover {
+            background: rgba(255,255,255,0.08);
+            border-color: rgba(255,255,255,0.15);
+            transform: translateX(-3px) scale(1.005);
+            box-shadow: 4px 0 20px rgba(0,0,0,0.3);
+        }
+
+        .area-bar.active {
+            border-color: var(--glass-border-active);
+            background: rgba(10, 132, 255, 0.08);
+            box-shadow: 0 0 0 1px rgba(10,132,255,0.2), 0 8px 24px rgba(10,132,255,0.1);
+        }
+
+        /* Flash when new report flies in */
+        .area-bar.flash {
+            animation: barFlash 0.6s ease;
+        }
+
+        @keyframes barFlash {
+            0% { background: rgba(255,255,255,0.04); }
+            30% { background: rgba(255,255,255,0.18); border-color: rgba(255,255,255,0.35); box-shadow: 0 0 20px rgba(255,255,255,0.1); }
+            100% { background: rgba(255,255,255,0.04); }
+        }
+
+        .area-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .area-name-group { display: flex; flex-direction: column; gap: 2px; }
+        .area-name { font-weight: 600; font-size: 14px; letter-spacing: -0.2px; }
+        .area-meta { font-size: 11px; color: var(--text-tertiary); }
+
+        .count-badge {
+            background: rgba(10, 132, 255, 0.15);
+            border: 1px solid rgba(10, 132, 255, 0.3);
+            color: var(--primary);
+            font-size: 12px;
+            font-weight: 700;
+            padding: 3px 10px;
+            border-radius: 20px;
+            min-width: 32px;
+            text-align: center;
+            transition: background 0.3s, transform 0.2s;
+        }
+
+        .count-badge.bump {
+            animation: countBump 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+        }
+
+        @keyframes countBump {
+            0% { transform: scale(1); }
+            30% { transform: scale(1.4); background: rgba(10,132,255,0.35); }
+            100% { transform: scale(1); }
+        }
+
+        /* Progress bar */
+        .progress-container {
+            height: 5px;
+            background: rgba(255,255,255,0.06);
+            border-radius: 3px;
+            display: flex;
+            overflow: hidden;
+            gap: 1px;
+        }
+
+        .progress-bad {
+            height: 100%;
+            background: linear-gradient(90deg, var(--danger), #FF6B6B);
+            border-radius: 3px 0 0 3px;
+            transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .progress-good {
+            height: 100%;
+            background: linear-gradient(90deg, var(--success), #5AFD82);
+            border-radius: 0 3px 3px 0;
+            transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Score labels */
+        .score-labels {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 6px;
+        }
+
+        .score-label {
+            font-size: 10px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .score-dot {
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+        }
+
+        /* ─── FLYING MARKER ─── */
+        .flying-marker {
+            position: fixed;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9000;
+            pointer-events: none;
+            will-change: transform, opacity;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+        }
+
+        .flying-marker-inner {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid rgba(255,255,255,0.4);
+        }
+
+        /* ─── PERMANENT MAP MARKER ─── */
+        .threshold-marker { background: none; border: none; }
+
+        .marker-inner {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2.5px solid rgba(255,255,255,0.8);
+            box-shadow: 0 0 0 0 rgba(255,255,255,0.4);
+            animation: markerPulse 2.5s ease-in-out infinite;
+            backdrop-filter: blur(10px);
+        }
+
+        @keyframes markerPulse {
+            0% { box-shadow: 0 0 0 0 rgba(255,255,255,0.35); transform: scale(1); }
+            50% { box-shadow: 0 0 0 16px rgba(255,255,255,0); transform: scale(1.06); }
+            100% { box-shadow: 0 0 0 0 rgba(255,255,255,0); transform: scale(1); }
+        }
+
+        /* ─── DETAIL MODAL ─── */
+        #details-modal {
+            position: fixed;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%) scale(0.95);
+            width: 480px;
+            background: rgba(22, 22, 30, 0.9);
+            backdrop-filter: blur(var(--blur-heavy)) saturate(200%);
+            -webkit-backdrop-filter: blur(var(--blur-heavy)) saturate(200%);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 28px;
+            padding: 28px;
+            z-index: 2000;
+            display: none;
+            box-shadow: 0 30px 80px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.05) inset;
+            animation: modalIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+
+        #details-modal.show {
+            display: block;
+        }
+
+        @keyframes modalIn {
+            from { opacity: 0; transform: translate(-50%, -48%) scale(0.92); }
+            to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+
+        .modal-title-group h2 { font-size: 18px; font-weight: 700; letter-spacing: -0.3px; }
+        .modal-title-group p { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+
+        .close-btn {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 16px;
+            color: var(--text-secondary);
+            transition: background 0.2s, color 0.2s;
+            line-height: 1;
+        }
+        .close-btn:hover { background: rgba(255,255,255,0.15); color: white; }
+
+        .report-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 14px;
+            border-radius: 14px;
+            margin-bottom: 6px;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.06);
+            transition: background 0.2s;
+        }
+        .report-item:hover { background: rgba(255,255,255,0.07); }
+
+        .report-icon {
+            margin-right: 14px;
+            width: 38px;
+            height: 38px;
+            border-radius: 11px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        /* ─── TOAST NOTIFICATION ─── */
+        #toast-container {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 5000;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            align-items: center;
+            pointer-events: none;
+        }
+
+        .toast {
+            background: rgba(28, 28, 36, 0.92);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 14px;
+            padding: 10px 16px;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+            animation: toastIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+
+        .toast.hide {
+            animation: toastOut 0.3s ease forwards;
+        }
+
+        @keyframes toastIn {
+            from { opacity: 0; transform: translateY(-12px) scale(0.9); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        @keyframes toastOut {
+            from { opacity: 1; transform: translateY(0) scale(1); }
+            to { opacity: 0; transform: translateY(-8px) scale(0.95); }
+        }
+
+        .toast-dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        /* ─── EMPTY STATE ─── */
+        .empty-state {
+            text-align: center;
+            padding: 48px 24px;
+            color: var(--text-secondary);
+        }
+        .empty-state .icon { font-size: 40px; margin-bottom: 12px; opacity: 0.4; }
+        .empty-state p { font-size: 14px; margin-bottom: 6px; }
+        .empty-state small { font-size: 12px; color: var(--text-tertiary); }
+
+        /* ─── RIPPLE LANDING ─── */
+        .ripple-burst {
+            position: fixed;
+            width: 12px; height: 12px;
+            border-radius: 50%;
+            border: 2px solid white;
+            pointer-events: none;
+            z-index: 8999;
+            animation: rippleBurst 0.6s ease-out forwards;
+        }
+
+        @keyframes rippleBurst {
+            0% { transform: translate(-50%, -50%) scale(1); opacity: 0.8; }
+            100% { transform: translate(-50%, -50%) scale(4); opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="map"></div>
+
+    <div id="toast-container"></div>
+
+    <div class="panel">
+        <div class="panel-header">
+            <div class="panel-header-top">
+                <div class="logo-group">
+                    <div class="logo-icon">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
+                            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                        </svg>
+                    </div>
+                    <h1>SafarSathi</h1>
+                </div>
+                <div class="live-badge">
+                    <div class="live-dot"></div>
+                    LIVE
+                </div>
+            </div>
+            <div class="panel-subtitle">Mhow–Indore Safety Monitor</div>
+        </div>
+
+        <div class="section-label">Active Zones</div>
+        <div class="area-list" id="area-list"></div>
+    </div>
+
+    <div id="details-modal">
+        <div class="modal-header">
+            <div class="modal-title-group">
+                <h2 id="modal-title">Area Details</h2>
+                <p id="modal-subtitle"></p>
+            </div>
+            <div class="close-btn" onclick="closeModal()">✕</div>
+        </div>
+        <!-- Safety Index inside modal -->
+        <div id="modal-safety" style="margin-bottom: 18px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 14px 16px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                <span style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.9px; color:rgba(255,255,255,0.35);">Safety Index</span>
+                <span id="modal-safety-score" style="font-size:20px; font-weight:700;"></span>
+            </div>
+            <div style="height:6px; background:rgba(255,255,255,0.06); border-radius:3px; overflow:hidden;">
+                <div id="modal-safety-fill" style="height:100%; border-radius:3px; transition: width 0.6s cubic-bezier(0.4,0,0.2,1), background 0.6s ease;"></div>
+            </div>
+            <div style="display:flex; justify-content:space-between; margin-top:6px;">
+                <span id="modal-safety-label" style="font-size:11px; color:rgba(255,255,255,0.45);"></span>
+                <span id="modal-safety-counts" style="font-size:11px; color:rgba(255,255,255,0.3);"></span>
+            </div>
+        </div>
+        <div id="report-details"></div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        const API_BASE = "http://10.255.63.232:8000/api/admin";
+        let map = L.map('map', { zoomControl: false }).setView([22.595, 75.785], 15);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+        let areas = {};
+        let processedReports = new Set();
+        let markers = {};
+
+        // ─── TOAST ───
+        function showToast(label, color) {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.innerHTML = `<div class="toast-dot" style="background:${color}; box-shadow: 0 0 6px ${color}"></div> New report: <strong>${label}</strong>`;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.classList.add('hide');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // ─── RIPPLE ───
+        function spawnRipple(x, y, color) {
+            const r = document.createElement('div');
+            r.className = 'ripple-burst';
+            r.style.left = x + 'px';
+            r.style.top = y + 'px';
+            r.style.borderColor = color;
+            document.body.appendChild(r);
+            setTimeout(() => r.remove(), 700);
+        }
+
+        // ─── RENDER AREAS ───
+        function renderAreas(areaStats) {
+            const list = document.getElementById('area-list');
+
+            if (areaStats.length === 0) {
+                list.innerHTML = `<div class="empty-state">
+                    <div class="icon">📍</div>
+                    <p>No reports yet</p>
+                    <small>Submit a report from the SafarSathi app to see it here</small>
+                </div>`;
+                updateSafetyMeter(0, 0, 0);
+                return;
+            }
+
+            let totalReports = 0, totalDanger = 0, totalSafe = 0;
+
+            areaStats.forEach(area => {
+                let bar = document.getElementById(`bar-${area.id}`);
+                const isNew = !bar;
+
+                if (isNew) {
+                    bar = document.createElement('div');
+                    bar.id = `bar-${area.id}`;
+                    bar.className = 'area-bar';
+                    list.appendChild(bar);
+                }
+
+                const total = area.bad_score + area.good_score || 1;
+                const badPct = (area.bad_score / total) * 100;
+                const goodPct = (area.good_score / total) * 100;
+
+                totalReports += area.report_count;
+                totalDanger += area.bad_score;
+                totalSafe += area.good_score;
+
+                // Keep current count to detect bumps
+                const prevCount = parseInt(bar.dataset.count || '0');
+                const countBump = !isNew && area.report_count > prevCount;
+                bar.dataset.count = area.report_count;
+
+                bar.innerHTML = `
+                    <div class="area-info">
+                        <div class="area-name-group">
+                            <span class="area-name">${area.area_name}</span>
+                            <span class="area-meta">${area.report_count} report${area.report_count !== 1 ? 's' : ''}</span>
+                        </div>
+                        <span class="count-badge${countBump ? ' bump' : ''}" id="badge-${area.id}">${area.report_count}</span>
+                    </div>
+                    <div class="progress-container">
+                        <div class="progress-bad" style="width: ${badPct}%"></div>
+                        <div class="progress-good" style="width: ${goodPct}%"></div>
+                    </div>
+                    <div class="score-labels">
+                        <span class="score-label" style="color: var(--danger)">
+                            <span class="score-dot" style="background: var(--danger)"></span>
+                            ${Math.round(badPct)}% alerts
+                        </span>
+                        <span class="score-label" style="color: var(--success)">
+                            <span class="score-dot" style="background: var(--success)"></span>
+                            ${Math.round(goodPct)}% safe
+                        </span>
+                    </div>
+                `;
+
+                bar.onclick = () => showModal(area);
+
+                // Handle permanent marker
+                if (area.permanent_marker) {
+                    if (!markers[area.id]) {
+                        const icon = L.divIcon({
+                            className: 'threshold-marker',
+                            html: `<div class="marker-inner" style="background: ${area.permanent_marker.color}aa">
+                                    <svg viewBox="0 0 24 24" fill="white" width="20"><path d="${area.permanent_marker.type === 'danger' ? 'M12 2L1 21h22L12 2zm0 13h-2v-2h2v2zm0 4h-2v-2h2v2z' : 'M12 2L4.5 9H3l9 13 9-13h-1.5L12 2zm0 3.5l5.5 8h-11L12 5.5z'}"></path></svg>
+                                   </div>`,
+                            iconSize: [44, 44]
+                        });
+                        markers[area.id] = L.marker([area.lat, area.lng], { icon }).addTo(map);
+                        markers[area.id]._areaData = area;
+                        markers[area.id].on('click', function() {
+                            const a = this._areaData;
+                            L.popup({ className: 'map-popup', maxWidth: 280, closeButton: true })
+                                .setLatLng([a.lat, a.lng])
+                                .setContent(buildMarkerPopup(a))
+                                .openOn(map);
+                        });
+                    }
+                } else if (markers[area.id]) {
+                    // permanent_marker was removed — clean up
+                    map.removeLayer(markers[area.id]);
+                    delete markers[area.id];
+                } else if (area.permanent_marker && markers[area.id]) {
+                    // Update stored area data for fresh popup info
+                    markers[area.id]._areaData = area;
+                }
+            });
+        }
+
+        // ─── HANDLE NEW REPORTS ───
+        function handleNewReports(reports) {
+            reports.forEach(report => {
+                if (processedReports.has(report.id)) return;
+                processedReports.add(report.id);
+
+                showToast(report.label, report.color);
+
+                // Temp map marker
+                const icon = L.divIcon({
+                    className: 'temp-marker',
+                    html: `<div style="
+                        width: 32px; height: 32px; border-radius: 50%;
+                        background: ${report.color}dd;
+                        border: 2px solid rgba(255,255,255,0.7);
+                        display: flex; align-items: center; justify-content: center;
+                        box-shadow: 0 0 16px ${report.color}, 0 0 32px ${report.color}44;
+                        animation: markerPulse 2.5s ease-in-out infinite;
+                    ">
+                        <svg viewBox="0 0 24 24" fill="white" width="16"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg>
+                    </div>`,
+                    iconSize: [32, 32]
+                });
+                const marker = L.marker([report.lat, report.lng], { icon }).addTo(map);
+
+                // Animate fly after delay
+                setTimeout(() => {
+                    const areaId = findAreaFor(report.lat, report.lng);
+                    const bar = document.getElementById(`bar-${areaId}`);
+                    if (!bar) { map.removeLayer(marker); return; }
+
+                    const startPos = map.latLngToContainerPoint(marker.getLatLng());
+                    const targetRect = bar.getBoundingClientRect();
+                    const targetX = targetRect.left + targetRect.width / 2;
+                    const targetY = targetRect.top + targetRect.height / 2;
+
+                    map.removeLayer(marker);
+
+                    // Create flyer
+                    const flyer = document.createElement('div');
+                    flyer.className = 'flying-marker';
+                    flyer.style.cssText = `
+                        left: ${startPos.x - 18}px;
+                        top: ${startPos.y - 18}px;
+                        background: ${report.color};
+                        box-shadow: 0 0 20px ${report.color}, 0 0 40px ${report.color}66;
+                        transition: none;
+                    `;
+                    flyer.innerHTML = `<div class="flying-marker-inner" style="background: ${report.color}">
+                        <svg viewBox="0 0 24 24" fill="white" width="16"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg>
+                    </div>`;
+                    document.body.appendChild(flyer);
+
+                    // Force reflow
+                    flyer.offsetHeight;
+
+                    // Arc trajectory using Web Animations API
+                    const dx = targetX - (startPos.x);
+                    const dy = targetY - (startPos.y);
+                    const dist = Math.sqrt(dx*dx + dy*dy);
+                    const arcHeight = -Math.min(dist * 0.4, 180);
+
+                    const keyframes = [
+                        { transform: 'translate(0, 0) scale(1)', opacity: 1 },
+                        { transform: `translate(${dx * 0.5 - arcHeight * 0.3}px, ${dy * 0.5 + arcHeight}px) scale(0.9)`, opacity: 0.9, offset: 0.5 },
+                        { transform: `translate(${dx}px, ${dy}px) scale(0.15)`, opacity: 0 }
+                    ];
+
+                    const anim = flyer.animate(keyframes, {
+                        duration: 900 + Math.random() * 200,
+                        easing: 'cubic-bezier(0.4, 0, 0.2, 1)',
+                        fill: 'forwards'
+                    });
+
+                    anim.onfinish = () => {
+                        flyer.remove();
+
+                        // Ripple at landing
+                        spawnRipple(targetX, targetY, report.color);
+
+                        // Flash the bar
+                        bar.classList.remove('flash');
+                        void bar.offsetWidth;
+                        bar.classList.add('flash');
+
+                        // Bump the badge
+                        const badge = document.getElementById(`badge-${areaId}`);
+                        if (badge) {
+                            badge.classList.remove('bump');
+                            void badge.offsetWidth;
+                            badge.classList.add('bump');
+                        }
+
+                        setTimeout(() => bar.classList.remove('flash'), 700);
+                    };
+
+                }, 5000 + Math.random() * 3000);
+            });
+        }
+
+        function findAreaFor(lat, lng) {
+            const radius = 0.002;
+            const rLat = Math.floor(lat / radius) * radius;
+            const rLng = Math.floor(lng / radius) * radius;
+            return `${rLat.toFixed(4)}_${rLng.toFixed(4)}`;
+        }
+
+        // ─── MODAL ───
+        function showModal(area) {
+            document.getElementById('modal-title').innerText = area.area_name;
+            document.getElementById('modal-subtitle').innerText = `${area.report_count} report${area.report_count !== 1 ? 's' : ''}`;
+
+            // Safety Index for this area
+            const total = area.bad_score + area.good_score || 1;
+            const safePct = Math.round((area.good_score / total) * 100);
+            let color, label, scoreColor;
+            if (safePct >= 70) {
+                color = 'linear-gradient(90deg, #30D158, #5AFD82)';
+                label = '✓ Mostly Safe';
+                scoreColor = '#30D158';
+            } else if (safePct >= 40) {
+                color = 'linear-gradient(90deg, #FF9F0A, #FFD60A)';
+                label = '⚡ Mixed Activity';
+                scoreColor = '#FF9F0A';
+            } else {
+                color = 'linear-gradient(90deg, #FF453A, #FF6B6B)';
+                label = '⚠ High Alert';
+                scoreColor = '#FF453A';
+            }
+            document.getElementById('modal-safety-score').textContent = safePct + '%';
+            document.getElementById('modal-safety-score').style.color = scoreColor;
+            document.getElementById('modal-safety-fill').style.width = safePct + '%';
+            document.getElementById('modal-safety-fill').style.background = color;
+            document.getElementById('modal-safety-label').textContent = label;
+            document.getElementById('modal-safety-counts').textContent = `${area.bad_score} alerts · ${area.good_score} safe`;
+
+            const detailList = document.getElementById('report-details');
+            detailList.innerHTML = area.reports.map(r => `
+                <div class="report-item">
+                    <div class="report-icon" style="background: ${r.color}22; border: 1px solid ${r.color}33">
+                        <svg viewBox="0 0 24 24" fill="${r.color}" width="20"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg>
+                    </div>
+                    <div style="flex:1">
+                        <div style="font-weight: 600; font-size: 14px">${r.label}</div>
+                        <div style="font-size: 11px; color: var(--text-secondary); margin-top: 2px">${new Date(r.created_at).toLocaleString()}</div>
+                    </div>
+                    <div style="width: 8px; height: 8px; border-radius: 50%; background: ${r.color}; box-shadow: 0 0 6px ${r.color}; flex-shrink: 0;"></div>
+                </div>
+            `).join('');
+            document.getElementById('details-modal').style.display = 'block';
+        }
+
+        // ─── MAP MARKER POPUP ───
+        function buildMarkerPopup(area) {
+            const total = area.bad_score + area.good_score || 1;
+            const safePct = Math.round((area.good_score / total) * 100);
+            let fillColor, safeLabel, scoreColor;
+            if (safePct >= 70) {
+                fillColor = 'linear-gradient(90deg,#30D158,#5AFD82)';
+                safeLabel = '✓ Mostly Safe';
+                scoreColor = '#30D158';
+            } else if (safePct >= 40) {
+                fillColor = 'linear-gradient(90deg,#FF9F0A,#FFD60A)';
+                safeLabel = '⚡ Mixed';
+                scoreColor = '#FF9F0A';
+            } else {
+                fillColor = 'linear-gradient(90deg,#FF453A,#FF6B6B)';
+                safeLabel = '⚠ High Alert';
+                scoreColor = '#FF453A';
+            }
+
+            const recentReports = (area.reports || []).slice(0, 4);
+            const reportRows = recentReports.map(r => {
+                const ago = timeSince(new Date(r.created_at));
+                return `<div class="popup-report-row">
+                    <div class="popup-report-dot" style="background:${r.color}; box-shadow:0 0 4px ${r.color}"></div>
+                    <span class="popup-report-label">${r.label}</span>
+                    <span class="popup-report-time">${ago}</span>
+                </div>`;
+            }).join('');
+
+            const markerColor = area.permanent_marker ? area.permanent_marker.color : '#0A84FF';
+
+            return `<div class="popup-inner">
+                <div class="popup-header">
+                    <div class="popup-icon" style="background:${markerColor}22; border:1px solid ${markerColor}44">
+                        <svg viewBox="0 0 24 24" fill="${markerColor}" width="18"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg>
+                    </div>
+                    <div>
+                        <div class="popup-area-name">${area.area_name}</div>
+                        <div class="popup-count">${area.report_count} report${area.report_count !== 1 ? 's' : ''}</div>
+                    </div>
+                </div>
+                ${reportRows}
+                <div class="popup-safety-bar">
+                    <div class="popup-safety-row">
+                        <span class="popup-safety-label">Safety Index</span>
+                        <span class="popup-safety-score" style="color:${scoreColor}">${safePct}% · ${safeLabel}</span>
+                    </div>
+                    <div class="popup-track">
+                        <div class="popup-fill" style="width:${safePct}%; background:${fillColor}"></div>
+                    </div>
+                </div>
+            </div>`;
+        }
+
+        function timeSince(date) {
+            const secs = Math.floor((new Date() - date) / 1000);
+            if (secs < 60) return `${secs}s ago`;
+            if (secs < 3600) return `${Math.floor(secs/60)}m ago`;
+            return `${Math.floor(secs/3600)}h ago`;
+        }
+
+        function closeModal() {
+            document.getElementById('details-modal').style.display = 'none';
+        }
+
+        // ─── MAIN LOOP ───
+        async function updateData() {
+            try {
+                const reportsRes = await fetch(`${API_BASE}/reports`);
+                const reportsData = await reportsRes.json();
+
+                const areasRes = await fetch(`${API_BASE}/area-stats`);
+                const areasData = await areasRes.json();
+
+                renderAreas(areasData.areas);
+                handleNewReports(reportsData.reports);
+            } catch (e) {
+                console.error("Update failed", e);
+            }
+        }
+
+        setInterval(updateData, 2000);
+        updateData();
+    </script>
+</body>
+</html>
