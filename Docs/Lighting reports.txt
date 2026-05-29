@@ -1,0 +1,39 @@
+reports :-
+
+ radius- 2km 
+
+Good Lightning :
+
+1.  Umariya (AB Road Front of SDBC — Highway)         22.59779300, 75.78732640
+2.  Umariya (Samarth Park Colony, Mhow-Indore Hwy)   22.60234720, 75.79748490
+3.  Umariya (Rudraksh Greens Entry Road)              22.60806250, 75.79418750
+4.  Umariya (SDBC Bus Stop — AB Road)                 22.59739100, 75.78820500
+5.  Umariya (SDBC College Gate Road)                  22.59659000, 75.78780100
+6.  Umariya (AB Road — Toward Rau, North Side)        22.60100000, 75.79100000
+7.  Umariya (AB Road — Toward Mhow, South Side)       22.59400000, 75.78400000
+8.  Umariya (Mhow-Indore Highway Service Lane)        22.59550000, 75.78580000
+9.  Umariya (Petrol Pump Area on AB Road)             22.60150000, 75.79200000
+10. Umariya (Dhaba/Tea Stall Strip — AB Road)         22.59700000, 75.79050000
+11. Umariya (SDBC Campus Internal Road)               22.59780000, 75.78700000
+12. Umariya (Samarth Park Colony Inner Road)          22.60180000, 75.79600000
+13. Harnya Khedi (Vidhut Nagar Colony Road)           22.58400000, 75.77940000
+14. Harnya Khedi (Main Access Road from AB Road)      22.59653900, 75.78780100
+15. Harnya Khedi (Shrikrishna Emerald Green Road)     22.58961380, 75.77214810
+
+Bad Lightning :
+
+1.  Umariya (Inner Village Lane — West of AB Road)    22.60080000, 75.78380000
+2.  Umariya (Farmland Kachchi Track — South SDBC)     22.59200000, 75.78700000
+3.  Umariya (Back Gate Track — West Wall SDBC)        22.59780000, 75.78450000
+4.  Umariya (Abandoned Plot Road near College)        22.59950000, 75.78900000
+5.  Umariya (Nala/Drain Side Path)                    22.59450000, 75.78880000
+6.  Umariya (Old Diversion Road — Pre Bypass)         22.60100000, 75.78700000
+7.  Umariya (Umaria–Santer Kachchi Road)              22.60400000, 75.78580000
+8.  Umariya (Farmland Boundary Road — North Umaria)   22.60500000, 75.78400000
+9.  Umariya (Open Ground Track Near Bus Stop)         22.59580000, 75.78750000
+10. Umariya (Construction Site Road — North East)     22.60250000, 75.79200000
+11. Harnya Khedi (Internal Village Lanes)             22.59600000, 75.78600000
+12. Harnya Khedi (Agricultural Field Track)           22.59200000, 75.78200000
+13. Harnya Khedi (Harnya Khedi–Rasalpura Kachchi Path) 22.58880000, 75.78400000
+14. Harnya Khedi (Unnamed Road — Emerald Green Back)  22.58958470, 75.77674250
+15. Harnya Khedi (Forested/Plantation Track West NH)  22.59750000, 75.78300000

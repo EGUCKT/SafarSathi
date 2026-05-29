@@ -1,0 +1,357 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--font-sans, sans-serif); color: var(--color-text-primary); background: transparent; }
+
+.section-title {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-tertiary);
+  margin-bottom: 10px;
+}
+
+.arch-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 1rem 0 0.5rem;
+}
+
+.layer {
+  display: flex;
+  align-items: stretch;
+  border-left: 2.5px solid;
+  margin-bottom: 8px;
+  border-radius: 0 10px 10px 0;
+  overflow: hidden;
+}
+
+.layer-label {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  transform: rotate(180deg);
+  font-size: 10px;
+  font-weight: 500;
+  padding: 8px 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  letter-spacing: 0.05em;
+}
+
+.layer-content {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 12px;
+  flex: 1;
+  background: var(--color-background-secondary);
+}
+
+.chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.1s;
+  border: 0.5px solid transparent;
+  white-space: nowrap;
+}
+.chip:hover { opacity: 0.8; transform: scale(1.03); }
+.chip:active { transform: scale(0.97); }
+
+.dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+
+/* Layer colors */
+.l-app  { border-color: #534AB7; }
+.l-app  .layer-label  { background: #EEEDFE; color: #3C3489; }
+.l-app  .chip         { background: #EEEDFE; color: #3C3489; border-color: #AFA9EC; }
+.l-app  .dot          { background: #534AB7; }
+
+.l-intel { border-color: #1D9E75; }
+.l-intel .layer-label { background: #E1F5EE; color: #085041; }
+.l-intel .chip        { background: #E1F5EE; color: #085041; border-color: #5DCAA5; }
+.l-intel .dot         { background: #1D9E75; }
+
+.l-data  { border-color: #185FA5; }
+.l-data  .layer-label { background: #E6F1FB; color: #0C447C; }
+.l-data  .chip        { background: #E6F1FB; color: #0C447C; border-color: #85B7EB; }
+.l-data  .dot         { background: #185FA5; }
+
+.l-ext   { border-color: #BA7517; }
+.l-ext   .layer-label { background: #FAEEDA; color: #633806; }
+.l-ext   .chip        { background: #FAEEDA; color: #633806; border-color: #EF9F27; }
+.l-ext   .dot         { background: #BA7517; }
+
+@media (prefers-color-scheme: dark) {
+  .l-app  .layer-label  { background: #26215C; color: #CECBF6; }
+  .l-app  .chip         { background: #26215C; color: #CECBF6; border-color: #534AB7; }
+  .l-intel .layer-label { background: #04342C; color: #9FE1CB; }
+  .l-intel .chip        { background: #04342C; color: #9FE1CB; border-color: #1D9E75; }
+  .l-data  .layer-label { background: #042C53; color: #B5D4F4; }
+  .l-data  .chip        { background: #042C53; color: #B5D4F4; border-color: #185FA5; }
+  .l-ext   .layer-label { background: #412402; color: #FAC775; }
+  .l-ext   .chip        { background: #412402; color: #FAC775; border-color: #BA7517; }
+}
+
+/* Flow arrows between layers */
+.flow-arrow {
+  display: flex;
+  align-items: center;
+  padding: 0 0 0 14px;
+  margin-bottom: 8px;
+  gap: 8px;
+}
+.flow-arrow-line {
+  flex: 1;
+  height: 1px;
+  background: var(--color-border-secondary);
+}
+.flow-arrow-label {
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+}
+
+/* Detail panel */
+.detail-panel {
+  background: var(--color-background-primary);
+  border: 0.5px solid var(--color-border-tertiary);
+  border-radius: var(--border-radius-lg, 12px);
+  padding: 14px 16px;
+  margin-top: 12px;
+  min-height: 56px;
+  transition: opacity 0.2s;
+}
+.detail-title {
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 6px;
+}
+.detail-body {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+}
+.detail-badge {
+  display: inline-block;
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-weight: 500;
+  margin-right: 4px;
+  margin-bottom: 4px;
+}
+
+/* Formula block */
+.formula {
+  font-family: var(--font-mono, monospace);
+  font-size: 13px;
+  background: var(--color-background-secondary);
+  border-radius: 6px;
+  padding: 6px 10px;
+  margin-top: 6px;
+  color: var(--color-text-primary);
+  border-left: 2px solid #1D9E75;
+}
+</style>
+</head>
+<body>
+<div style="padding: 0.5rem 0 1rem;">
+
+<div class="arch-grid">
+
+  <div class="section-title">System architecture — click any component to explore</div>
+
+  <!-- Application Layer -->
+  <div class="layer l-app">
+    <div class="layer-label">Application</div>
+    <div class="layer-content">
+      <div class="chip" onclick="show('flutter')"><div class="dot"></div>Flutter App</div>
+      <div class="chip" onclick="show('mapbox')"><div class="dot"></div>Mapbox SDK</div>
+      <div class="chip" onclick="show('sos')"><div class="dot"></div>SOS Module</div>
+      <div class="chip" onclick="show('crowdsource')"><div class="dot"></div>Crowd Reporting</div>
+      <div class="chip" onclick="show('admin')"><div class="dot"></div>Admin Dashboard</div>
+    </div>
+  </div>
+
+  <!-- Intelligence Layer -->
+  <div class="layer l-intel">
+    <div class="layer-label">Intelligence</div>
+    <div class="layer-content">
+      <div class="chip" onclick="show('safety-score')"><div class="dot"></div>Safety Scorer</div>
+      <div class="chip" onclick="show('routing')"><div class="dot"></div>Route Engine (NetworkX)</div>
+      <div class="chip" onclick="show('ml')"><div class="dot"></div>Random Forest / XGBoost</div>
+      <div class="chip" onclick="show('guardian')"><div class="dot"></div>Guardian (SOS Trigger)</div>
+    </div>
+  </div>
+
+  <!-- Backend & Data Layer -->
+  <div class="layer l-data">
+    <div class="layer-label">Backend / Data</div>
+    <div class="layer-content">
+      <div class="chip" onclick="show('fastapi')"><div class="dot"></div>FastAPI (Python)</div>
+      <div class="chip" onclick="show('postgis')"><div class="dot"></div>PostgreSQL + PostGIS</div>
+      <div class="chip" onclick="show('firebase')"><div class="dot"></div>Firebase Realtime DB</div>
+      <div class="chip" onclick="show('auth')"><div class="dot"></div>Auth & Privacy</div>
+    </div>
+  </div>
+
+  <!-- External APIs -->
+  <div class="layer l-ext">
+    <div class="layer-label">External APIs</div>
+    <div class="layer-content">
+      <div class="chip" onclick="show('osm')"><div class="dot"></div>OSMnx / OSM</div>
+      <div class="chip" onclick="show('twilio')"><div class="dot"></div>Twilio SMS</div>
+      <div class="chip" onclick="show('places')"><div class="dot"></div>Google Places API</div>
+      <div class="chip" onclick="show('crime')"><div class="dot"></div>Crime Data APIs</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Detail Panel -->
+<div class="detail-panel" id="detail">
+  <div class="detail-title" style="color: var(--color-text-secondary); font-weight: 400;">
+    Tap any component above to see implementation details
+  </div>
+</div>
+
+</div>
+
+<script>
+const data = {
+  flutter: {
+    title: "Flutter — Mobile Frontend",
+    color: "#534AB7",
+    body: "Cross-platform Android/iOS app with Hot Reload for fast iteration. Integrates Mapbox Maps SDK for custom 'Safety Map' skin — streetlights, police stations, and safe havens are highlighted. State managed via Riverpod.",
+    badges: ["Flutter 3+", "Riverpod", "Mapbox Flutter SDK"],
+  },
+  mapbox: {
+    title: "Mapbox Navigation SDK",
+    color: "#534AB7",
+    body: "Unlike Google Maps, Mapbox allows fully custom route weighting. The app sends coordinates to the Python backend, which computes the safety-weighted optimal route and returns it. Mapbox renders it with custom styles — unsafe segments shown in amber/red.",
+    badges: ["Custom routing weights", "Safety skin overlay", "Offline tiles"],
+  },
+  sos: {
+    title: "SOS / Emergency Module",
+    color: "#534AB7",
+    body: "Three-tier trigger system: (1) Manual SOS button, (2) Voice trigger — detects 'Help' or scream via Audio Classification, (3) Dead-man Switch — if user deviates from safe path and doesn't respond, auto-alert contacts. Firebase handles real-time location broadcast.",
+    badges: ["Voice detection", "Dead-man switch", "Firebase broadcast", "Twilio SMS"],
+  },
+  crowdsource: {
+    title: "Crowd Reporting (The 'Waze for Safety')",
+    color: "#534AB7",
+    body: "Users drop geo-pinned incident reports: Poor Lighting, Harassment Incident, or Safe Haven (24/7 café, police booth). Reports are ingested into the real-time safety score with a 24-hour decay weighting (R in the Safety Score formula).",
+    badges: ["Geo-pinned pins", "24hr decay", "Moderated pipeline"],
+  },
+  admin: {
+    title: "Admin / Web Dashboard",
+    color: "#534AB7",
+    body: "Web panel for city safety officers or NGO admins. Shows heatmaps of reported incidents, high-risk zone polygons (PostGIS queries), and data moderation tools to verify or remove crowd-sourced reports.",
+    badges: ["Incident heatmap", "Zone polygons", "Data moderation"],
+  },
+  "safety-score": {
+    title: "Safety Score Engine — Core AIML Task",
+    color: "#1D9E75",
+    formula: "S = w₁(C) + w₂(L) + w₃(P) + w₄(R)",
+    body: "Weighted regression over four inputs:\n• C = Crime Density (historical, normalized 0–1)\n• L = Lighting (OSM street lamp data)\n• P = Popularity/Crowd density (open business proxy)\n• R = User Ratings (crowd reports, last 24 hrs)\n\nWeights (w) shift by time of day — lighting w₂ is more critical at 2 AM than 2 PM.",
+    badges: ["Time-aware weights", "0–1 normalized", "Per-segment scoring"],
+  },
+  routing: {
+    title: "Route Engine — Modified Dijkstra via NetworkX",
+    color: "#1D9E75",
+    formula: "Edge Weight = Distance × (1 / SafetyScore)",
+    body: "NetworkX loads the city street graph from OSMnx. Each edge (road segment) gets a safety-weighted cost. Dijkstra's (or A*) then finds the path that balances shortest distance vs highest safety. Low-score segments are 'avoided' even if physically shorter.",
+    badges: ["NetworkX graph", "Dijkstra / A*", "Safety-weighted edges"],
+  },
+  ml: {
+    title: "ML Model — Random Forest Regressor",
+    color: "#1D9E75",
+    body: "Scikit-learn Random Forest trained on tabular safety features (crime density, lux levels, crowd counts, time-of-day, day-of-week). Predicts a continuous Safety Index for any road segment coordinate. No GPU needed. For advanced use: XGBoost or a Graph Neural Network (GNN) to model neighborhood-to-neighborhood safety diffusion.",
+    badges: ["Scikit-learn", "Tabular data", "XGBoost optional", "GNN advanced"],
+  },
+  guardian: {
+    title: "Guardian Feature — SOS Intelligence",
+    color: "#1D9E75",
+    body: "Two intelligent triggers beyond a simple button:\n• Sentiment/Voice: Audio Classification model listens for 'Help' or scream-frequency sounds and fires SOS.\n• Dead-man Switch: Monitors real-time GPS against the Safe Path. If deviation > threshold AND user doesn't acknowledge a prompt within 30 s, auto-alerts emergency contacts.",
+    badges: ["Audio classification", "GPS deviation watch", "Auto-escalation"],
+  },
+  fastapi: {
+    title: "FastAPI — Python Backend",
+    color: "#185FA5",
+    body: "Python's native AI ecosystem makes FastAPI the ideal backend. Async request handling is critical for real-time navigation pings (concurrent route lookups + live crowd data ingestion). Exposes REST endpoints consumed by the Flutter app and Admin dashboard.",
+    badges: ["Async/await", "Python ML native", "OpenAPI docs auto-gen"],
+  },
+  postgis: {
+    title: "PostgreSQL + PostGIS — Spatial Database",
+    color: "#185FA5",
+    body: "PostGIS adds spatial geometry types and functions to Postgres. Critical queries like 'Find 5 nearest lit streetlamps to this coordinate' or 'List high-risk polygons intersecting this route buffer' require a spatial index — standard SQL cannot do this. Use Supabase for easier cloud setup (includes PostGIS).",
+    badges: ["ST_DWithin", "Spatial indexes", "Supabase hosted"],
+  },
+  firebase: {
+    title: "Firebase — Real-time Location & Auth",
+    color: "#185FA5",
+    body: "Firebase Realtime Database broadcasts live GPS coordinates to emergency contacts during SOS — one line of code versus a full WebSocket server. Also handles user authentication and push notifications for nearby incident alerts.",
+    badges: ["Realtime DB", "Push notifications", "Auth SDK"],
+  },
+  auth: {
+    title: "Auth, Privacy & Data Security",
+    color: "#185FA5",
+    body: "User location data is sensitive. Key principles: GPS coordinates are never stored longer than the active journey session. Crowd reports are anonymized before storage. JWT-based API auth. Optional end-to-end encrypted SOS location sharing.",
+    badges: ["JWT auth", "Anon reports", "Session-only GPS", "E2E SOS option"],
+  },
+  osm: {
+    title: "OSMnx — Street Network & POI Data",
+    color: "#BA7517",
+    body: "Downloads city street graphs from OpenStreetMap with one Python call. Also fetches Points of Interest: streetlights, police stations, hospitals, 24/7 shops — used as ground truth for the Lighting (L) and Popularity (P) score components.",
+    badges: ["Street graph download", "Streetlamp nodes", "Police/hospital POIs"],
+  },
+  twilio: {
+    title: "Twilio — Emergency SMS Alerts",
+    color: "#BA7517",
+    body: "When SOS triggers, Twilio fires SMS messages to the user's pre-registered emergency contacts with: their name, live location link (Google Maps deeplink), and a timestamp. Works even if contacts don't have the app installed.",
+    badges: ["SMS fallback", "No app needed", "Location deep-link"],
+  },
+  places: {
+    title: "Google Places API — Safe Haven Finder",
+    color: "#BA7517",
+    body: "Queries nearby verified Safe Havens: 24/7 hospitals, police stations, fire stations, pharmacies. Results are overlaid on the map as tappable pins. During SOS, the nearest Safe Haven is highlighted on the route with ETA.",
+    badges: ["24/7 filter", "Verified locations", "SOS integration"],
+  },
+  crime: {
+    title: "Crime Data APIs — Risk Ground Truth",
+    color: "#BA7517",
+    body: "Ingests historical crime density data from city open data portals (e.g., data.gov, local police APIs). Crime density C is normalized 0–1 per grid cell and refreshed periodically. Used as the highest-weight input in the Safety Score formula.",
+    badges: ["Open data portals", "Grid normalization", "Periodic refresh"],
+  },
+};
+
+function show(key) {
+  const d = data[key];
+  const panel = document.getElementById('detail');
+  const badgeHtml = (d.badges || []).map(b =>
+    `<span class="detail-badge" style="background:${d.color}18;color:${d.color};border:0.5px solid ${d.color}44">${b}</span>`
+  ).join('');
+  const formulaHtml = d.formula
+    ? `<div class="formula">${d.formula}</div>`
+    : '';
+  panel.innerHTML = `
+    <div class="detail-title" style="color:${d.color}">${d.title}</div>
+    ${formulaHtml}
+    <div class="detail-body" style="margin-top:6px;white-space:pre-line">${d.body}</div>
+    <div style="margin-top:8px">${badgeHtml}</div>
+  `;
+}
+</script>
+</body>
+</html>
